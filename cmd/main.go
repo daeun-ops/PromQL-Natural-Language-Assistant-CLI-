@@ -2,52 +2,79 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"promql-nlq-assistant/internal/llm"
+	"promql-nlq-assistant/internal/prom"
 )
 
 func main() {
-	fmt.Println(" PromQL Natural Language Assistant (local test mode)")
-	fmt.Println("Type your question below (or 'exit' to quit):")
+	fmt.Println(" PromQL NL Assistant")
+	fmt.Println("Enter natural language (type 'exit' to quit).")
 
+	lc := llm.New()
+	pc := prom.NewClient()
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		fmt.Print("\n> ")
-		scanned := scanner.Scan()
-		if !scanned {
+		if !scanner.Scan() {
 			break
 		}
-
-		input := strings.TrimSpace(scanner.Text())
-		if strings.ToLower(input) == "exit" {
-			fmt.Println(" Bye!")
-			break
-		}
-
-		if input == "" {
+		in := strings.TrimSpace(scanner.Text())
+		if in == "" {
 			continue
 		}
+		if strings.ToLower(in) == "exit" {
+			fmt.Println(" Bye")
+			return
+		}
 
-		// 간단한 가짜 매핑 (LLM 대신)
-		promql := fakePromQL(input)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 
+		// 1) (Optional) Schema hint from Prometheus
+		var hint string
+		if metrics, err := pc.ListMetrics(ctx, 200); err == nil {
+			// Keep it brief to avoid long prompts
+			hint = strings.Join(metrics, ", ")
+		}
+
+		// 2) LLM → PromQL
+		promql, err := lc.GeneratePromQL(ctx, in, hint)
+		if err != nil {
+			fmt.Println("[LLM ERROR]", err)
+			continue
+		}
 		fmt.Println("\n[Generated PromQL]")
 		fmt.Println(promql)
-		fmt.Println("\n[Validation]")
-		fmt.Println(" Syntax looks fine (mock check)")
+
+		// 3) Validate syntax
+		if err := prom.Validate(promql); err != nil {
+			fmt.Println("\n[Validation]  Invalid PromQL:", err)
+			continue
+		}
+		fmt.Println("\n[Validation]  OK")
+
+		// 4) Run instant query (optional)
+		if os.Getenv("PROM_URL") != "" {
+			fmt.Printf("\n[Query @ %s]\n", os.Getenv("PROM_URL"))
+			if b, err := pc.InstantQuery(ctx, promql); err == nil {
+				// print first ~800 chars for brevity
+				out := string(b)
+				if len(out) > 800 {
+					out = out[:800] + "..."
+				}
+				fmt.Println(out)
+			} else {
+				fmt.Println("Query error:", err)
+			}
+		} else {
+			fmt.Println("\n[Hint] Set PROM_URL to run the query against Prometheus (e.g., http://localhost:9090)")
+		}
 	}
 }
-
-func fakePromQL(input string) string {
-	switch {
-	case strings.Contains(input, "에러") || strings.Contains(input, "error"):
-		return `sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))`
-	case strings.Contains(input, "지연") || strings.Contains(input, "latency"):
-		return `histogram_quantile(0.95, sum by (le, endpoint)(rate(http_request_duration_seconds_bucket[5m])))`
-	default:
-		return `sum(rate(http_requests_total[5m]))`
-	}
-}
-
