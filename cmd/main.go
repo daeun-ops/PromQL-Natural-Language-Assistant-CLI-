@@ -58,6 +58,7 @@ func main() {
 			fmt.Println("\n[Validation]  Invalid PromQL:", err)
 			continue
 		}
+		
 		fmt.Println("\n[Validation]  OK")
 
 		// 4) Run instant query (optional)
