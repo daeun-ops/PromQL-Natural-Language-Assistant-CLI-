@@ -1,13 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-# 다운로드 위치 또는 PATH에 prometheus가 있다고 가정하에 진햇ㅇ
-# 현재  루트에서 실행한다고 가정
-if [[ ! -f "./ops/prometheus.yml" ]]; then
-  echo "Run from repo root. Missing ./ops/prometheus.yml"
+ROOT_DIR="$(cd "$(dirname "$0")/.."; pwd)"
+cd "$ROOT_DIR"
+
+CONF="./ops/prometheus.yml"
+BIN="./prometheus"
+
+if [[ ! -f "$CONF" ]]; then
+  echo "Missing $CONF"
   exit 1
 fi
 
-echo "Starting Prometheus on 0.0.0.0:9090 ..."
-./prometheus --config.file=./ops/prometheus.yml --web.listen-address="0.0.0.0:9090"
+if ! command -v "$BIN" >/dev/null 2>&1 && ! [[ -x "$BIN" ]]; then
+  echo "Prometheus binary not found at $BIN"
+  echo "Copy the downloaded 'prometheus' binary here or put it in PATH."
+  exit 1
+fi
 
+echo "Starting Prometheus on 0.0.0.0:9090 with $CONF"
+"$BIN" --config.file="$CONF" --web.listen-address="0.0.0.0:9090"
