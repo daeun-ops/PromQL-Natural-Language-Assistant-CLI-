@@ -177,7 +177,7 @@ promql-nlq-assistant/
 - Prometheus 설치 (압축 해제 후 바이너리 실행)
 - `ops/prometheus.yml` 설명 + `scripts/start_prometheus.sh` 실행법
 - 방화벽/포트 9090 접근 확인 
-- Node Exporter 추가 방법 간단 메모
+- Node Exporter 추가 방법
 
 ### `scripts/start_prometheus.sh`
 - 현재 디렉토리 기준으로 `./prometheus` 바이너리 실행
