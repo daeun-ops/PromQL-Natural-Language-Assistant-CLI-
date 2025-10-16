@@ -210,6 +210,11 @@ PROM_URL=[http://localhost:9090](http://localhost:9090/)
 ### `examples/sample_queries.txt`
 - (나중에) 실제 실행 스냅샷을 붙여둘 아카이브 파일  
   - NL 입력 → 생성된 PromQL → 검증 결과 → 짧은 결과 요약
+  - 
+
+
+  안녕.... 버리는 프로젝트가 .....는
+  아니고 다른거 하다가 다시 고쳐주러 올게
 
 
 
